@@ -20,7 +20,10 @@ This Python script allows you to download entire soundtracks from KHInsider (htt
 ## Installation
 
 1. Clone this repository or download the `app.py` file.
-2. Install the required packages:
+```bash
+git clone https://github.com/orenjerry/khinsider-downloader.git
+```
+3. Install the required packages:
 
 ```bash
 pip install -r requirements.txt
