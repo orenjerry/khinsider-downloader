@@ -43,20 +43,39 @@ def fetch_from_url(url):
     soup = BeautifulSoup(response.content, 'html.parser')
 
     song_list = soup.find(id="songlist")
-    anchors = song_list.find_all("a")
-    songMap = {}
-    for anchor in anchors:
-        href = anchor.get("href")
-        if href and "mp3" in href:
-            href = BASE_URL + href
-            if href not in songMap:
-                songMap[href] = anchor.string
+    rows = song_list.find_all("tr")
+    song_map = {}
 
-    if not songMap:
+    for row in rows:
+        cols = row.find_all("td")
+        if len(cols) < 4:
+            continue  # Skip rows that don't have enough columns
+
+        if len(cols) >= 9:
+            track_number = cols[1].get_text(strip=True)
+            subtrack_number = cols[2].get_text(strip=True)  # Remove trailing dot
+            song_anchor = cols[3].find("a")
+        elif len(cols) >= 3:
+            track_number = ""
+            subtrack_number = cols[1].get_text(strip=True)  # Remove trailing dot
+            song_anchor = cols[2].find("a")
+        else:
+            continue
+
+        if song_anchor and "mp3" in song_anchor.get("href", ""):
+            href = BASE_URL + song_anchor.get("href")
+            song_name = song_anchor.get_text(strip=True)
+            if track_number != "":
+                formatted_filename = f"{track_number}-{subtrack_number} {sanitize_filename(song_name)}"
+            else:
+                formatted_filename = f"{subtrack_number} {sanitize_filename(song_name)}"
+            song_map[href] = formatted_filename
+
+    if not song_map:
         print(f"[error] No links found for the url: {url}")
         return
 
-    print(f"[info] {len(songMap)} links acquired")
+    print(f"[info] {len(song_map)} links acquired")
 
     def process_song(href, song_name):
         link_soup = BeautifulSoup(requests.get(href).content, 'html.parser')
@@ -78,8 +97,8 @@ def fetch_from_url(url):
 
         download_file(mp3_url, file_path, file_size)
 
-    with ThreadPoolExecutor(max_workers=5) as executor: ## You can change this number to change the number of concurrent downloads (be careful with your internet connection and your computer's hardware)
-        executor.map(process_song, songMap.keys(), songMap.values())
+    with ThreadPoolExecutor(max_workers=5) as executor:  # Adjust as needed
+        executor.map(process_song, song_map.keys(), song_map.values())
 
 def main():
     input_file_name = "inputs.txt"
